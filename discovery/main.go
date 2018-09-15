@@ -16,7 +16,6 @@ var (
 	address      = flag.String("address", ":4000", "Discovery server address")
 	node         = flag.String("envoy-node", "envoy", "Envoy node ID")
 	listenerAddr = flag.String("listener", "0.0.0.0:10000", "Listener address")
-	extauthAddr  = flag.String("extauth", "extauth:4000", "External authorization server address")
 )
 
 func main() {

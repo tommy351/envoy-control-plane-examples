@@ -16,6 +16,25 @@ static_resources:
         - socket_address:
             address: discovery
             port_value: 4000
+    - name: extauth
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      http2_protocol_options: {}
+      connect_timeout: 1s
+      hosts:
+        - socket_address:
+            address: extauth
+            port_value: 4000
+    - name: accesslog
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      http2_protocol_options: {}
+      connect_timeout: 1s
+      hosts:
+        - socket_address:
+            address: accesslog
+            port_value: 4000
+
 
 node:
   cluster: envoy-cluster

@@ -10,6 +10,8 @@ import (
 	"github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
 	"github.com/envoyproxy/go-control-plane/envoy/api/v2/listener"
 	"github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
+	als "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v2"
+	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/filter/accesslog/v2"
 	extauth "github.com/envoyproxy/go-control-plane/envoy/config/filter/http/ext_authz/v2alpha"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/config/filter/network/http_connection_manager/v2"
 	"github.com/envoyproxy/go-control-plane/pkg/cache"
@@ -72,36 +74,29 @@ func buildSnapshot() cache.Snapshot {
 
 	routes = append(routes, routeConf)
 
-	authService := &api.Cluster{
-		Name:                 "extauth",
-		Type:                 api.Cluster_STRICT_DNS,
-		LbPolicy:             api.Cluster_ROUND_ROBIN,
-		Http2ProtocolOptions: &core.Http2ProtocolOptions{},
-		ConnectTimeout:       time.Second,
-		LoadAssignment: &api.ClusterLoadAssignment{
-			ClusterName: "extauth",
-			Endpoints: []endpoint.LocalityLbEndpoints{
-				{
-					LbEndpoints: []endpoint.LbEndpoint{
-						{
-							Endpoint: &endpoint.Endpoint{
-								Address: buildAddress(*extauthAddr),
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	clusters = append(clusters, authService)
-
 	extAuthConf, err := util.MessageToStruct(&extauth.ExtAuthz{
 		Services: &extauth.ExtAuthz_GrpcService{
 			GrpcService: &core.GrpcService{
 				TargetSpecifier: &core.GrpcService_EnvoyGrpc_{
 					EnvoyGrpc: &core.GrpcService_EnvoyGrpc{
-						ClusterName: authService.Name,
+						ClusterName: "extauth",
+					},
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	logConf, err := util.MessageToStruct(&als.HttpGrpcAccessLogConfig{
+		CommonConfig: &als.CommonGrpcAccessLogConfig{
+			LogName: "access_log",
+			GrpcService: &core.GrpcService{
+				TargetSpecifier: &core.GrpcService_EnvoyGrpc_{
+					EnvoyGrpc: &core.GrpcService_EnvoyGrpc{
+						ClusterName: "accesslog",
 					},
 				},
 			},
@@ -132,6 +127,12 @@ func buildSnapshot() cache.Snapshot {
 			},
 			{
 				Name: util.Router,
+			},
+		},
+		AccessLog: []*accesslog.AccessLog{
+			{
+				Name:   util.HTTPGRPCAccessLog,
+				Config: logConf,
 			},
 		},
 	})

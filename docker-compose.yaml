@@ -21,3 +21,6 @@ services:
   extauth:
     <<: *base-go
     command: go run ./extauth
+  accesslog:
+    <<: *base-go
+    command: go run ./accesslog
