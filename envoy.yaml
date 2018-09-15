@@ -1,0 +1,33 @@
+admin:
+  access_log_path: /tmp/envoy-admin.log
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 10001
+
+static_resources:
+  clusters:
+    - name: discovery
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      http2_protocol_options: {}
+      connect_timeout: 1s
+      hosts:
+        - socket_address:
+            address: discovery
+            port_value: 4000
+
+node:
+  cluster: envoy-cluster
+  id: envoy
+
+dynamic_resources:
+  ads_config:
+    api_type: GRPC
+    grpc_services:
+      envoy_grpc:
+        cluster_name: discovery
+  lds_config:
+    ads: {}
+  cds_config:
+    ads: {}

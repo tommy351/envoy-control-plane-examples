@@ -1,0 +1,16 @@
+version: '3.4'
+
+services:
+  envoy:
+    image: envoyproxy/envoy
+    volumes:
+      - .:/etc/envoy
+    ports:
+      - 10000
+      - 10001
+  discovery:
+    build:
+      context: .
+    command: go run ./discovery
+    volumes:
+      - .:/app
