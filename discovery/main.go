@@ -8,7 +8,7 @@ import (
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 	"github.com/envoyproxy/go-control-plane/pkg/cache"
 	xds "github.com/envoyproxy/go-control-plane/pkg/server"
-	"github.com/sirupsen/logrus"
+	"github.com/tommy351/envoy-control-plane-examples/util"
 	"google.golang.org/grpc"
 )
 
@@ -16,18 +16,19 @@ var (
 	address      = flag.String("address", ":4000", "Discovery server address")
 	node         = flag.String("envoy-node", "envoy", "Envoy node ID")
 	listenerAddr = flag.String("listener", "0.0.0.0:10000", "Listener address")
+	extauthAddr  = flag.String("extauth", "extauth:4000", "External authorization server address")
 )
 
 func main() {
 	flag.Parse()
-	logger := logrus.StandardLogger()
 	ln, err := net.Listen("tcp", *address)
+	log := util.Logger.WithField("address", *address)
 
 	if err != nil {
-		logger.WithError(err).WithField("address", *address).Fatalln("Failed to start TCP listener")
+		log.WithError(err).Fatalln("Failed to start TCP listener")
 	}
 
-	snapshotCache := cache.NewSnapshotCache(true, &NodeHash{}, logger)
+	snapshotCache := cache.NewSnapshotCache(true, &NodeHash{}, util.Logger)
 	snapshotCache.SetSnapshot(*node, buildSnapshot())
 	server := xds.NewServer(snapshotCache, &Callbacks{})
 	grpcServer := grpc.NewServer()
@@ -38,9 +39,9 @@ func main() {
 	api.RegisterRouteDiscoveryServiceServer(grpcServer, server)
 	api.RegisterListenerDiscoveryServiceServer(grpcServer, server)
 
-	logger.WithField("address", ln.Addr()).Infoln("Starting GRPC server")
+	log.Infoln("Starting GRPC server")
 
 	if err := grpcServer.Serve(ln); err != nil {
-		logger.WithError(err).WithField("address", ln.Addr()).Fatalln("Failed to start GRPC server")
+		log.WithError(err).Fatalln("Failed to start GRPC server")
 	}
 }

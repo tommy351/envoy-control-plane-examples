@@ -10,6 +10,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
 	"github.com/envoyproxy/go-control-plane/envoy/api/v2/listener"
 	"github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
+	extauth "github.com/envoyproxy/go-control-plane/envoy/config/filter/http/ext_authz/v2alpha"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/config/filter/network/http_connection_manager/v2"
 	"github.com/envoyproxy/go-control-plane/pkg/cache"
 	"github.com/envoyproxy/go-control-plane/pkg/util"
@@ -71,6 +72,46 @@ func buildSnapshot() cache.Snapshot {
 
 	routes = append(routes, routeConf)
 
+	authService := &api.Cluster{
+		Name:                 "extauth",
+		Type:                 api.Cluster_STRICT_DNS,
+		LbPolicy:             api.Cluster_ROUND_ROBIN,
+		Http2ProtocolOptions: &core.Http2ProtocolOptions{},
+		ConnectTimeout:       time.Second,
+		LoadAssignment: &api.ClusterLoadAssignment{
+			ClusterName: "extauth",
+			Endpoints: []endpoint.LocalityLbEndpoints{
+				{
+					LbEndpoints: []endpoint.LbEndpoint{
+						{
+							Endpoint: &endpoint.Endpoint{
+								Address: buildAddress(*extauthAddr),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	clusters = append(clusters, authService)
+
+	extAuthConf, err := util.MessageToStruct(&extauth.ExtAuthz{
+		Services: &extauth.ExtAuthz_GrpcService{
+			GrpcService: &core.GrpcService{
+				TargetSpecifier: &core.GrpcService_EnvoyGrpc_{
+					EnvoyGrpc: &core.GrpcService_EnvoyGrpc{
+						ClusterName: authService.Name,
+					},
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
 	hcmConfig, err := util.MessageToStruct(&hcm.HttpConnectionManager{
 		CodecType:  hcm.AUTO,
 		StatPrefix: "http",
@@ -85,6 +126,10 @@ func buildSnapshot() cache.Snapshot {
 			},
 		},
 		HttpFilters: []*hcm.HttpFilter{
+			{
+				Name:   util.ExternalAuthorization,
+				Config: extAuthConf,
+			},
 			{
 				Name: util.Router,
 			},

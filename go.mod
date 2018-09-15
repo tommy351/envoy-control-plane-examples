@@ -3,7 +3,7 @@ module github.com/tommy351/envoy-control-plane-examples
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/envoyproxy/go-control-plane v0.5.0
-	github.com/gogo/googleapis v1.1.0 // indirect
+	github.com/gogo/googleapis v1.1.0
 	github.com/gogo/protobuf v1.1.1
 	github.com/lyft/protoc-gen-validate v0.0.6 // indirect
 	github.com/onsi/gomega v1.4.2 // indirect

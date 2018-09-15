@@ -1,5 +1,12 @@
 version: '3.4'
 
+x-base-services:
+  golang: &base-go
+    build:
+      context: .
+    volumes:
+      - .:/app
+
 services:
   envoy:
     image: envoyproxy/envoy
@@ -9,8 +16,8 @@ services:
       - 10000
       - 10001
   discovery:
-    build:
-      context: .
+    <<: *base-go
     command: go run ./discovery
-    volumes:
-      - .:/app
+  extauth:
+    <<: *base-go
+    command: go run ./extauth
